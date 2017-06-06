@@ -28,18 +28,14 @@ public class SQSReceiver implements Receiver{
 
     /**
      *  http://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_ReceiveMessage.html
-       * This is done because sqs api does a short polling. The only way to receive all messages, is to query sqs multiple times.
+     * This is done because sqs api does a short polling. The only way to receive all messages, is to query sqs multiple times.
      *
      * This Recieves all the messages from the queue and sends it to the client.
-      */
-
+     */
     public List<Message> receive(final String sqsUrl){
         assert sqsUrl!=null;
-        GetQueueAttributesRequest getQueueAttributesRequest = new GetQueueAttributesRequest()
-                .withQueueUrl(sqsUrl)
-                .withAttributeNames(QueueAttributeName.All);
         List<Message> response = new ArrayList<>();
-        while(Integer.valueOf(sqs.getQueueAttributes(getQueueAttributesRequest).getAttributes().get("ApproximateNumberOfMessages")) > 0){
+        while(getNumberOfObjectsToRetry(sqsUrl) > 0){
             ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                     .withQueueUrl(sqsUrl)
                     .withWaitTimeSeconds(10);
@@ -47,6 +43,19 @@ public class SQSReceiver implements Receiver{
             response.addAll(receiveMessageResult.getMessages());
         }
         return response;
+    }
+
+    /**
+     * Provides count of number of messages that still have to be retried.
+     * @param sqsUrl
+     * @return
+     */
+    public Integer getNumberOfObjectsToRetry(final String sqsUrl){
+        assert sqsUrl!=null;
+        GetQueueAttributesRequest getQueueAttributesRequest = new GetQueueAttributesRequest()
+                .withQueueUrl(sqsUrl)
+                .withAttributeNames(QueueAttributeName.All);
+        return Integer.valueOf(sqs.getQueueAttributes(getQueueAttributesRequest).getAttributes().get("ApproximateNumberOfMessages"));
     }
 
     /**
@@ -62,7 +71,7 @@ public class SQSReceiver implements Receiver{
                         .collect(Collectors.toList())
                         .stream()
                         .map(param -> new DeleteMessageBatchRequestEntry().withReceiptHandle(param.receiptHandle).withId(param.id))
-                .collect(Collectors.toList()));
+                        .collect(Collectors.toList()));
         sqs.deleteMessageBatch(deleteMessageBatchRequest);
     }
 

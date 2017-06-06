@@ -50,17 +50,23 @@ public class LoaderHandlerClient {
         assert receiveErrorMessageRequest.getSqsUrl()!=null;
         final ScheduledExecutorService scheduler =
                 Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                Receiver receiver = SQSReceiver.getReceiver();
-                List<Message> objects = receiver.receive(receiveErrorMessageRequest.getSqsUrl());
-                function.apply(objects.stream().map(Message::getBody).collect(Collectors.toList()));
-                // Once Message is received delete it from the queue
-                receiver.deleteMessagesFromQueue(objects,receiveErrorMessageRequest.getSqsUrl());
-            }
+        scheduler.scheduleAtFixedRate(() -> {
+            Receiver receiver = SQSReceiver.getReceiver();
+            List<Message> objects = receiver.receive(receiveErrorMessageRequest.getSqsUrl());
+            function.apply(objects.stream().map(Message::getBody).collect(Collectors.toList()));
+            // Once Message is received delete it from the queue
+            receiver.deleteMessagesFromQueue(objects,receiveErrorMessageRequest.getSqsUrl());
         }, 0, receiveErrorMessageRequest.getPingInterval() == 0 ? 10: receiveErrorMessageRequest.getPingInterval() , TimeUnit.SECONDS);
 
+    }
+
+    /**
+     * Provides the count of number of objects that have to be retried.
+     * @param sqsUrl
+     * @return
+     */
+    public Integer getNumberOfObjectsToRetry(final String sqsUrl){
+        return SQSReceiver.getReceiver().getNumberOfObjectsToRetry(sqsUrl);
     }
 
     private void publish(String sqsUrl, List<String> messages){
