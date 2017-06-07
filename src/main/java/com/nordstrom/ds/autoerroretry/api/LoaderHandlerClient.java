@@ -1,10 +1,11 @@
 package com.nordstrom.ds.autoerroretry.api;
 
 import com.amazonaws.services.sqs.model.Message;
-import com.nordstrom.ds.autoerroretry.model.PublishErrorMessageRequest;
-import com.nordstrom.ds.autoerroretry.model.ReceiveErrorMessageRequest;
+import com.nordstrom.ds.autoerroretry.model.*;
 import com.nordstrom.ds.autoerroretry.service.Publisher;
 import com.nordstrom.ds.autoerroretry.service.Receiver;
+import com.nordstrom.ds.autoerroretry.service.kafka.KafkaPublisher;
+import com.nordstrom.ds.autoerroretry.service.kafka.KafkaReceiver;
 import com.nordstrom.ds.autoerroretry.service.sqs.SQSPublisher;
 import com.nordstrom.ds.autoerroretry.service.sqs.SQSReceiver;
 import java.util.List;
@@ -23,9 +24,7 @@ public class LoaderHandlerClient {
      * @throws AssertionError
      */
     public void publishErrors(PublishErrorMessageRequest publishErrorMessageRequest) throws AssertionError{
-        assert publishErrorMessageRequest!=null;
-        assert publishErrorMessageRequest.getSqsUrl()!=null;
-        publish(publishErrorMessageRequest.getSqsUrl(),publishErrorMessageRequest.getMessages());
+        publish(publishErrorMessageRequest);
     }
 
     /**
@@ -34,9 +33,7 @@ public class LoaderHandlerClient {
      * @throws AssertionError
      */
     public void publishRetries(PublishErrorMessageRequest publishErrorMessageRequest) throws AssertionError{
-        assert publishErrorMessageRequest!=null;
-        assert publishErrorMessageRequest.getSqsUrl()!=null;
-        publish(publishErrorMessageRequest.getSqsUrl(),publishErrorMessageRequest.getMessages());
+        publish(publishErrorMessageRequest);
     }
 
     /**
@@ -47,17 +44,12 @@ public class LoaderHandlerClient {
      */
     public void receiveRetires(ReceiveErrorMessageRequest receiveErrorMessageRequest, Function<List<String>,Void> function) throws AssertionError{
         assert receiveErrorMessageRequest!=null;
-        assert receiveErrorMessageRequest.getSqsUrl()!=null;
-        final ScheduledExecutorService scheduler =
-                Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(() -> {
-            Receiver receiver = SQSReceiver.getReceiver();
-            List<Message> objects = receiver.receive(receiveErrorMessageRequest.getSqsUrl());
-            function.apply(objects.stream().map(Message::getBody).collect(Collectors.toList()));
-            // Once Message is received delete it from the queue
-            receiver.deleteMessagesFromQueue(objects,receiveErrorMessageRequest.getSqsUrl());
-        }, 0, receiveErrorMessageRequest.getPingInterval() == 0 ? 10: receiveErrorMessageRequest.getPingInterval() , TimeUnit.SECONDS);
-
+        assert receiveErrorMessageRequest.getMessageBroker() != null;
+        if(receiveErrorMessageRequest.getMessageBroker().equals(MessageBroker.SQS)){
+            receiveAndProcessFromSqs(receiveErrorMessageRequest,function);
+        }else if(receiveErrorMessageRequest.getMessageBroker().equals(MessageBroker.KAFKA)){
+            receiveAndProcessFromKafka(receiveErrorMessageRequest,function);
+        }
     }
 
     /**
@@ -69,9 +61,58 @@ public class LoaderHandlerClient {
         return SQSReceiver.getReceiver().getNumberOfObjectsToRetry(sqsUrl);
     }
 
-    private void publish(String sqsUrl, List<String> messages){
-        Publisher publisher = SQSPublisher.getPublisher();
-        publisher.publish(sqsUrl,messages);
+    private void publish(PublishErrorMessageRequest publishErrorMessageRequest){
+        assert publishErrorMessageRequest!=null;
+        assert publishErrorMessageRequest.getMessageBroker() != null;
+        if(publishErrorMessageRequest.getMessageBroker().equals(MessageBroker.SQS)){
+            assert publishErrorMessageRequest.getSqsUrl()!=null;
+            publishToSqs(publishErrorMessageRequest.getSqsUrl(),publishErrorMessageRequest.getMessages());
+        }else if(publishErrorMessageRequest.getMessageBroker().equals(MessageBroker.KAFKA)){
+            assert publishErrorMessageRequest.getKafkaServers() != null;
+            assert publishErrorMessageRequest.getKafkaTopic() != null;
+            publishToKafka(publishErrorMessageRequest.getKafkaServers(),publishErrorMessageRequest.getKafkaTopic(),
+                    publishErrorMessageRequest.getKafkaRetries(),publishErrorMessageRequest.getMaintainOrder(),publishErrorMessageRequest.getMessages());
+        }
     }
+
+    private void publishToSqs(String sqsUrl, List<String> messages){
+        Publisher publisher = SQSPublisher.getPublisher();
+        publisher.publish(new SqsConnectionSettings(sqsUrl),messages);
+    }
+
+    private void publishToKafka(List<String> kafkaBrokers,String topic,int retires,boolean orderGuarentee,List<String> messages){
+        Publisher publisher = KafkaPublisher.getPublisher();
+        publisher.publish(new KafkaConnectionSettings(kafkaBrokers,topic,retires,orderGuarentee),messages);
+    }
+
+
+
+    private void receiveAndProcessFromSqs(ReceiveErrorMessageRequest receiveErrorMessageRequest, Function<List<String>,Void> function){
+        assert receiveErrorMessageRequest.getSqsUrl()!=null;
+        final ScheduledExecutorService scheduler =
+                Executors.newScheduledThreadPool(1);
+        scheduler.scheduleAtFixedRate(() -> {
+            Receiver receiver = SQSReceiver.getReceiver();
+            ReceivedMessage receivedObjects = receiver.receive(new SqsConnectionSettings(receiveErrorMessageRequest.getSqsUrl()));
+            function.apply(receivedObjects.getMessageBody());
+            // Once Message is received delete it from the queue
+            receiver.deleteMessagesFromQueue( receivedObjects.getMessageWrapper().stream().map(obj -> (Message) obj).collect(Collectors.toList()),new SqsConnectionSettings(receiveErrorMessageRequest.getSqsUrl()));
+        }, 0, receiveErrorMessageRequest.getPingInterval() == 0 ? 10: receiveErrorMessageRequest.getPingInterval() , TimeUnit.SECONDS);
+    }
+
+    private void receiveAndProcessFromKafka(ReceiveErrorMessageRequest receiveErrorMessageRequest, Function<List<String>,Void> function){
+        assert receiveErrorMessageRequest.getKafkaServers()!=null;
+        assert receiveErrorMessageRequest.getKafkaTopicName()!=null;
+        assert receiveErrorMessageRequest.getKafkaConsumerGroupName()!=null;
+        final ScheduledExecutorService scheduler =
+                Executors.newScheduledThreadPool(1);
+        scheduler.scheduleAtFixedRate(() -> {
+            Receiver receiver = KafkaReceiver.getReceiver();
+            ReceivedMessage receivedObjects = receiver.receive(new KafkaConnectionSettings(receiveErrorMessageRequest.getKafkaServers(),
+                    receiveErrorMessageRequest.getKafkaTopicName(),receiveErrorMessageRequest.getKafkaConsumerGroupName()));
+            function.apply(receivedObjects.getMessageBody());
+        }, 0, receiveErrorMessageRequest.getPingInterval() == 0 ? 10: receiveErrorMessageRequest.getPingInterval() , TimeUnit.SECONDS);
+    }
+
 
 }
