@@ -3,7 +3,9 @@ package com.nordstrom.ds.autoerroretry.service.sqs;
 
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.*;
-import com.nordstrom.ds.autoerroretry.config.ApplicationConfig;
+import com.nordstrom.ds.autoerroretry.config.sqs.ApplicationConfig;
+import com.nordstrom.ds.autoerroretry.model.ConnectionSettings;
+import com.nordstrom.ds.autoerroretry.model.ReceivedMessage;
 import com.nordstrom.ds.autoerroretry.service.Receiver;
 
 import java.io.Serializable;
@@ -32,8 +34,11 @@ public class SQSReceiver implements Receiver{
      *
      * This Recieves all the messages from the queue and sends it to the client.
      */
-    public List<Message> receive(final String sqsUrl){
-        assert sqsUrl!=null;
+    public ReceivedMessage receive(final ConnectionSettings connectionSettings){
+        assert connectionSettings!=null;
+        assert connectionSettings.getProperties().getProperty("sqsUrl") != null;
+        String sqsUrl = connectionSettings.getProperties().getProperty("sqsUrl");
+        List<ReceivedMessage> returnList = new ArrayList<>();
         List<Message> response = new ArrayList<>();
         while(getNumberOfObjectsToRetry(sqsUrl) > 0){
             ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
@@ -42,7 +47,8 @@ public class SQSReceiver implements Receiver{
             ReceiveMessageResult receiveMessageResult = sqs.receiveMessage(receiveMessageRequest);
             response.addAll(receiveMessageResult.getMessages());
         }
-        return response;
+        List<String> messagesBody = response.stream().map(Message::getBody).collect(Collectors.toList());
+        return new ReceivedMessage(messagesBody,new ArrayList<>(response));
     }
 
     /**
@@ -59,11 +65,14 @@ public class SQSReceiver implements Receiver{
     }
 
     /**
-     * Deletes messages from the queue that have already been retried.
+     *
      * @param messages
-     * @param sqsUrl
+     * @param connectionSettings
      */
-    public void deleteMessagesFromQueue(List<Message> messages,final String sqsUrl){
+    public void deleteMessagesFromQueue(List<Message> messages,final ConnectionSettings connectionSettings){
+        assert connectionSettings != null;
+        assert connectionSettings.getProperties().getProperty("sqsUrl") != null;
+        String sqsUrl = connectionSettings.getProperties().getProperty("sqsUrl");
         DeleteMessageBatchRequest deleteMessageBatchRequest = new DeleteMessageBatchRequest(sqsUrl)
                 .withEntries(messages
                         .stream()

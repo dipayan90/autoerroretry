@@ -4,11 +4,11 @@ package com.nordstrom.ds.autoerroretry.service.sqs;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.SendMessageBatchRequest;
 import com.amazonaws.services.sqs.model.SendMessageBatchRequestEntry;
-import com.nordstrom.ds.autoerroretry.config.ApplicationConfig;
+import com.nordstrom.ds.autoerroretry.config.sqs.ApplicationConfig;
+import com.nordstrom.ds.autoerroretry.model.ConnectionSettings;
 import com.nordstrom.ds.autoerroretry.service.Publisher;
 
 import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -29,13 +29,14 @@ public class SQSPublisher implements Publisher{
     }
 
     /**
-     * Publishes the objects sent to a queue for retrying at a later period of time.
-     * @param sqsUrl
+     *
+     * @param connectionSettings
      * @param messages
-     * @throws AssertionError
      */
-    public void publish(final String sqsUrl, final List<String> messages) throws AssertionError {
-        assert sqsUrl != null;
+    public void publish(final ConnectionSettings connectionSettings, final List<String> messages)  {
+        assert connectionSettings != null;
+        assert connectionSettings.getProperties().getProperty("sqsUrl") != null;
+        String sqsUrl = connectionSettings.getProperties().getProperty("sqsUrl");
         assert messages != null;
         if (messages.size() != 0) {
             AmazonSQS sqs = ApplicationConfig.getApplicationConfig().getsqsclient();

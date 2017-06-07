@@ -1,4 +1,4 @@
-package com.nordstrom.ds.autoerroretry.config;
+package com.nordstrom.ds.autoerroretry.config.sqs;
 
 import com.amazonaws.auth.AWSCredentialsProviderChain;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
