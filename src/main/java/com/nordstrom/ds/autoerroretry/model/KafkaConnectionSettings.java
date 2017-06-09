@@ -42,10 +42,8 @@ public class KafkaConnectionSettings implements ConnectionSettings {
         properties.put("enable.auto.commit", "true");
         properties.put("auto.commit.interval.ms", "1000");
         properties.put("session.timeout.ms", "30000");
-        properties.put("key.deserializer",
-                "org.apache.kafka.common.serializa-tion.StringDeserializer");
-        properties.put("value.deserializer",
-                "org.apache.kafka.common.serializa-tion.StringDeserializer");
+        properties.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        properties.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
     }
 
 
