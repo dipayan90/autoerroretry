@@ -31,7 +31,7 @@ public class KafkaReceiver implements Receiver{
         assert connectionSettings!= null;
         assert connectionSettings.getProperties() != null;
         Properties props = connectionSettings.getProperties();
-        assert props.getProperty("bootstrap.servers")!= null;
+        assert props.get("bootstrap.servers")!= null;
         assert props.getProperty("topic") != null;
         String topic = props.getProperty("topic");
 
@@ -40,12 +40,15 @@ public class KafkaReceiver implements Receiver{
         consumer.subscribe(Collections.singleton(topic));
         List<String> messageBody = new ArrayList<>();
         long startTime = System.currentTimeMillis();
-        while ((System.currentTimeMillis()-startTime)<10000){
-            ConsumerRecords<String, String> records = consumer.poll(100);
-            records.iterator().forEachRemaining(rec -> {
-                messageBody.add(rec.value());
-            });
-
+        try{
+            while ((System.currentTimeMillis()-startTime)<10000){
+                ConsumerRecords<String, String> records = consumer.poll(100);
+                records.iterator().forEachRemaining(rec -> {
+                    messageBody.add(rec.value());
+                });
+            }
+        }finally {
+            consumer.close();
         }
         return new ReceivedMessage(messageBody);
     }

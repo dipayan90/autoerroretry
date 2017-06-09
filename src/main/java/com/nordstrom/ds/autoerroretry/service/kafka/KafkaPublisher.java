@@ -28,7 +28,7 @@ public class KafkaPublisher implements Publisher{
         assert connectionSettings!= null;
         assert connectionSettings.getProperties() != null;
         Properties props = connectionSettings.getProperties();
-        assert props.getProperty("bootstrap.servers")!= null;
+        assert props.get("bootstrap.servers")!= null;
         assert props.getProperty("topic") != null;
         String topic = props.getProperty("topic");
         Producer<String, String> producer = new KafkaProducer<>(props);
