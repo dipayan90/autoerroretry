@@ -8,23 +8,26 @@ Description
 Handle errors on your application code and push objects that may have to be retried either because of 
 intermittent connection errors, databased persistence failures or something else.
 
-This library is a very light weight utility that currently uses Amazon SQS for the retries.
+This library is a very light weight utility that currently supports Amazon SQS and Apache Kafka as
+backend queuing mechanisms for retrying errors.
 
 It supports the following :
 
- - Configuring your own Amazon SQS endpoint url.
+ - Configuring your own Connection settings for Amazon SQS or Apache Kafka.
  - Configuring how often you would want your logic to obtain failures and do a retry of your own custom logic. 
    Default value is 10 secs if nothing is passed.
 
 Future Scope:
 
-- Support for other channels apart from Amazon SQS for retries.
+- Support for other channels apart from Amazon SQS and Apache Kafka for retries.
 
 Requirements
 ------------
 
 1. Java 8+
 2. A SQS queue needs to be created on your AWS account. A queue url would be required. 
+3. If Using Kafka as the underlying messaging apparatus, you would need the broker hosts information, topic name and the client group Id. 
+ Also indicate if in-case order in which the objects need to be retried should be in order or not.
 
 Sample Code
 -------------
@@ -58,8 +61,23 @@ Publish the object that needs to be retried. SQS Url will be required here :
  client.publishRetries(new PublishErrorMessageRequest.
                 PublishErrorMessageRequestBuilder()
                 .withMessages(messageList)
+                .withMessageBroker(MessageBroker.SQS)
                 .withSqsUrl(queueUrl).build());
 
+```
+
+Publish object to kafka based backend: 
+
+```java
+client.publishRetries(new PublishErrorMessageRequest.
+                PublishErrorMessageRequestBuilder()
+                .withMessages(messageList)
+                .withMessageBroker(MessageBroker.KAFKA)
+                .withKafkaRetries(0)
+                .withKafkaServers(Collections.singletonList("localhost:9092"))
+                .withKafkaTopic("retry")
+                .withOrderGuarentee(true)
+                .build());
 ```
 
 Send your function as a parameter that you want to be executed, in short your retry logic
@@ -69,7 +87,7 @@ Data is received in the form of String that can be easily converted back to your
 converter.fromString(e);
 ```
 
-SQS Url will be required here:
+Amazon SQS based receiver. SQSUrl will be required here:
 
 ```java
 
@@ -82,6 +100,26 @@ client.recieveRetires(new ReceiveErrorMessageRequest
             return null;
         });
 
+```
+
+Apache kafka based receiver: 
+
+```java
+client.receiveRetires(new ReceiveErrorMessageRequest
+                .ReceiveErrorMessageRequestBuilder()
+                .withMessageBroker(MessageBroker.KAFKA)
+                .withKafkaServers(Collections.singletonList("localhost:9092"))
+                .withKafkaConsumerGroupId("localConsumer")
+                .withKafkaTopicName("retry")
+                .withPingInterval(5)
+                .build(), strings -> {
+            strings.forEach(e -> { value.addAndGet(1);
+                try {
+                    System.out.println( "  Message:  " + converter.fromString(e).toString());
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                }
+            });
 ```
 
 Build Library
