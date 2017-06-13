@@ -38,6 +38,11 @@ public class PublishErrorMessageRequest {
      */
     private boolean maintainOrder;
 
+    /**
+     * Indicate the file name of the file that you would want the data to be written to
+     */
+    private String tapeFileName;
+
     public String getSqsUrl() {
         return sqsUrl;
     }
@@ -56,6 +61,10 @@ public class PublishErrorMessageRequest {
 
     public boolean getMaintainOrder(){return maintainOrder;}
 
+    public String getTapeFileName() {
+        return tapeFileName;
+    }
+
     private PublishErrorMessageRequest(PublishErrorMessageRequestBuilder builder){
         this.sqsUrl = builder.nestedSqsUrl;
         this.messages = builder.nestedMessages;
@@ -64,6 +73,7 @@ public class PublishErrorMessageRequest {
         this.kafkaTopic = builder.kafkaTopic;
         this.kafkaRetries = builder.kafkaRetires;
         this.maintainOrder = builder.maintainOrder;
+        this.tapeFileName = builder.tapeFileName;
     }
 
     public static class PublishErrorMessageRequestBuilder{
@@ -74,6 +84,7 @@ public class PublishErrorMessageRequest {
         private String kafkaTopic;
         private int kafkaRetires;
         private boolean maintainOrder;
+        private String tapeFileName;
 
         public PublishErrorMessageRequestBuilder(){
 
@@ -111,6 +122,11 @@ public class PublishErrorMessageRequest {
 
         public PublishErrorMessageRequestBuilder withOrderGuarentee(boolean maintainOrder){
             this.maintainOrder = maintainOrder;
+            return this;
+        }
+
+        public PublishErrorMessageRequestBuilder withTapeFileName(String fileName){
+            this.tapeFileName = fileName;
             return this;
         }
 

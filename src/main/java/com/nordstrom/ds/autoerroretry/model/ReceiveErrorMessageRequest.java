@@ -32,6 +32,11 @@ public class ReceiveErrorMessageRequest {
      */
     private String kafkaConsumerGroupName;
 
+    /**
+     * Name of the file for tape
+     */
+    private String tapeFileName;
+
     public String getSqsUrl() {
         return sqsUrl;
     }
@@ -48,6 +53,10 @@ public class ReceiveErrorMessageRequest {
 
     public String getKafkaConsumerGroupName(){return kafkaConsumerGroupName;}
 
+    public String getTapeFileName() {
+        return tapeFileName;
+    }
+
     private ReceiveErrorMessageRequest(ReceiveErrorMessageRequestBuilder builder){
         this.sqsUrl = builder.nestedSqsUrl;
         this.pingInterval = builder.nestedInterval;
@@ -55,6 +64,7 @@ public class ReceiveErrorMessageRequest {
         this.kafkaServers = builder.kafkaServers;
         this.kafkaTopicName = builder.kafkaTopicName;
         this.kafkaConsumerGroupName = builder.kafkaConsumerGroupName;
+        this.tapeFileName = builder.tapeFileName;
     }
 
     public static class ReceiveErrorMessageRequestBuilder{
@@ -64,6 +74,7 @@ public class ReceiveErrorMessageRequest {
         private List<String> kafkaServers;
         private String kafkaTopicName;
         private String kafkaConsumerGroupName;
+        private String tapeFileName;
 
 
         public ReceiveErrorMessageRequestBuilder(){}
@@ -101,6 +112,11 @@ public class ReceiveErrorMessageRequest {
 
         public ReceiveErrorMessageRequest.ReceiveErrorMessageRequestBuilder withKafkaConsumerGroupId(String kafkaConsumerGroupId){
             this.kafkaConsumerGroupName = kafkaConsumerGroupId;
+            return this;
+        }
+
+        public ReceiveErrorMessageRequest.ReceiveErrorMessageRequestBuilder withtapeFileName(String fileName){
+            this.tapeFileName = fileName;
             return this;
         }
 

@@ -8,6 +8,9 @@ import com.nordstrom.ds.autoerroretry.service.kafka.KafkaPublisher;
 import com.nordstrom.ds.autoerroretry.service.kafka.KafkaReceiver;
 import com.nordstrom.ds.autoerroretry.service.sqs.SQSPublisher;
 import com.nordstrom.ds.autoerroretry.service.sqs.SQSReceiver;
+import com.nordstrom.ds.autoerroretry.service.tape.TapePublisher;
+import com.nordstrom.ds.autoerroretry.service.tape.TapeReceiver;
+
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -45,10 +48,20 @@ public class LoaderHandlerClient {
     public void receiveRetires(ReceiveErrorMessageRequest receiveErrorMessageRequest, Function<List<String>,Void> function) throws AssertionError{
         assert receiveErrorMessageRequest!=null;
         assert receiveErrorMessageRequest.getMessageBroker() != null;
-        if(receiveErrorMessageRequest.getMessageBroker().equals(MessageBroker.SQS)){
-            receiveAndProcessFromSqs(receiveErrorMessageRequest,function);
-        }else if(receiveErrorMessageRequest.getMessageBroker().equals(MessageBroker.KAFKA)){
-            receiveAndProcessFromKafka(receiveErrorMessageRequest,function);
+
+        switch (receiveErrorMessageRequest.getMessageBroker()){
+            case SQS:{
+                receiveAndProcessFromSqs(receiveErrorMessageRequest,function);
+                break;
+            }
+            case KAFKA:{
+                receiveAndProcessFromKafka(receiveErrorMessageRequest,function);
+                break;
+            }
+            case TAPE:{
+                receiveAndProcessFromTape(receiveErrorMessageRequest,function);
+                break;
+            }
         }
     }
 
@@ -64,14 +77,25 @@ public class LoaderHandlerClient {
     private void publish(PublishErrorMessageRequest publishErrorMessageRequest){
         assert publishErrorMessageRequest!=null;
         assert publishErrorMessageRequest.getMessageBroker() != null;
-        if(publishErrorMessageRequest.getMessageBroker().equals(MessageBroker.SQS)){
-            assert publishErrorMessageRequest.getSqsUrl()!=null;
-            publishToSqs(publishErrorMessageRequest.getSqsUrl(),publishErrorMessageRequest.getMessages());
-        }else if(publishErrorMessageRequest.getMessageBroker().equals(MessageBroker.KAFKA)){
-            assert publishErrorMessageRequest.getKafkaServers() != null;
-            assert publishErrorMessageRequest.getKafkaTopic() != null;
-            publishToKafka(publishErrorMessageRequest.getKafkaServers(),publishErrorMessageRequest.getKafkaTopic(),
-                    publishErrorMessageRequest.getKafkaRetries(),publishErrorMessageRequest.getMaintainOrder(),publishErrorMessageRequest.getMessages());
+        assert publishErrorMessageRequest.getMessages().size() != 0;
+
+        switch (publishErrorMessageRequest.getMessageBroker()){
+            case SQS:{
+                assert publishErrorMessageRequest.getSqsUrl()!=null;
+                publishToSqs(publishErrorMessageRequest.getSqsUrl(),publishErrorMessageRequest.getMessages());
+                break;
+            }
+            case KAFKA:{
+                assert publishErrorMessageRequest.getKafkaServers() != null;
+                assert publishErrorMessageRequest.getKafkaTopic() != null;
+                publishToKafka(publishErrorMessageRequest.getKafkaServers(),publishErrorMessageRequest.getKafkaTopic(),
+                        publishErrorMessageRequest.getKafkaRetries(),publishErrorMessageRequest.getMaintainOrder(),publishErrorMessageRequest.getMessages());
+                break;
+            }
+            case TAPE:{
+                assert publishErrorMessageRequest.getTapeFileName() != null;
+                publishToTape(publishErrorMessageRequest.getMessages(),publishErrorMessageRequest.getTapeFileName());
+            }
         }
     }
 
@@ -85,14 +109,17 @@ public class LoaderHandlerClient {
         publisher.publish(new KafkaConnectionSettings(kafkaBrokers,topic,retires,orderGuarentee),messages);
     }
 
-
+    private void publishToTape(List<String> messages,String fileName){
+        Publisher publisher = TapePublisher.getTapePublisher();
+        publisher.publish(new TapeConnectionSettings(fileName),messages);
+    }
 
     private void receiveAndProcessFromSqs(ReceiveErrorMessageRequest receiveErrorMessageRequest, Function<List<String>,Void> function){
         assert receiveErrorMessageRequest.getSqsUrl()!=null;
         final ScheduledExecutorService scheduler =
                 Executors.newScheduledThreadPool(1);
         scheduler.scheduleAtFixedRate(() -> {
-            Receiver receiver = SQSReceiver.getReceiver();
+            SQSReceiver receiver = SQSReceiver.getReceiver();
             ReceivedMessage receivedObjects = receiver.receive(new SqsConnectionSettings(receiveErrorMessageRequest.getSqsUrl()));
             function.apply(receivedObjects.getMessageBody());
             // Once Message is received delete it from the queue
@@ -110,6 +137,17 @@ public class LoaderHandlerClient {
             Receiver receiver = KafkaReceiver.getReceiver();
             ReceivedMessage receivedObjects = receiver.receive(new KafkaConnectionSettings(receiveErrorMessageRequest.getKafkaServers(),
                     receiveErrorMessageRequest.getKafkaTopicName(),receiveErrorMessageRequest.getKafkaConsumerGroupName()));
+            function.apply(receivedObjects.getMessageBody());
+        }, 0, receiveErrorMessageRequest.getPingInterval() == 0 ? 10: receiveErrorMessageRequest.getPingInterval() , TimeUnit.SECONDS);
+    }
+
+    private void receiveAndProcessFromTape(ReceiveErrorMessageRequest receiveErrorMessageRequest,Function<List<String>,Void> function){
+        assert receiveErrorMessageRequest.getTapeFileName() != null;
+        final ScheduledExecutorService scheduler =
+                Executors.newScheduledThreadPool(1);
+        scheduler.scheduleAtFixedRate(() -> {
+            Receiver receiver = TapeReceiver.getTapeReceiver();
+            ReceivedMessage receivedObjects = receiver.receive(new TapeConnectionSettings(receiveErrorMessageRequest.getTapeFileName()));
             function.apply(receivedObjects.getMessageBody());
         }, 0, receiveErrorMessageRequest.getPingInterval() == 0 ? 10: receiveErrorMessageRequest.getPingInterval() , TimeUnit.SECONDS);
     }

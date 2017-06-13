@@ -53,9 +53,4 @@ public class KafkaReceiver implements Receiver{
         return new ReceivedMessage(messageBody);
     }
 
-    @Override
-    public void deleteMessagesFromQueue(List<Message> messages, ConnectionSettings connectionSettings) {
-
-    }
-
 }
