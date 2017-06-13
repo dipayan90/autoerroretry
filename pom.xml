@@ -4,7 +4,7 @@
 
   <groupId>com.nordstrom.ds</groupId>
   <artifactId>autoerroretry</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.1</version>
   <packaging>jar</packaging>
 
   <properties>
@@ -58,6 +58,14 @@
       <version>${aws.client.version}</version>
     </dependency>
   </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <id>bintray-dipayan90-autoerroretry</id>
+            <name>dipayan90-autoerroretry</name>
+            <url>https://api.bintray.com/maven/dipayan90/autoerroretry/autoerroretry/;publish=1</url>
+        </repository>
+    </distributionManagement>
 
   <build>
     <plugins>
