@@ -166,5 +166,11 @@ To build the package:
 
 Get Library
 ------------
-
-To be added soon. 
+```xml
+<dependency>
+  <groupId>com.nordstrom.ds</groupId>
+  <artifactId>autoerroretry</artifactId>
+  <version>1.1</version>
+  <type>pom</type>
+</dependency> 
+```
