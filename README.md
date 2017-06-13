@@ -13,7 +13,7 @@ backend queuing mechanisms for retrying errors.
 
 It supports the following :
 
- - Configuring your own Connection settings for Amazon SQS or Apache Kafka.
+ - Configuring your own Connection settings for Amazon SQS, Apache Kafka and File Based Queue Tape.
  - Configuring how often you would want your logic to obtain failures and do a retry of your own custom logic. 
    Default value is 10 secs if nothing is passed.
 
@@ -28,7 +28,7 @@ Requirements
 2. A SQS queue needs to be created on your AWS account. A queue url would be required. 
 3. If Using Kafka as the underlying messaging apparatus, you would need the broker hosts information, topic name and the client group Id. 
  Also indicate if in-case order in which the objects need to be retried should be in order or not.
-
+4. The easiest way to get up and running is using a file based queuing system Tape ( https://github.com/square/tape )
 Sample Code
 -------------
 
@@ -80,6 +80,17 @@ client.publishRetries(new PublishErrorMessageRequest.
                 .build());
 ```
 
+Publish object to File based backend:
+
+```java
+client.publishRetries(new PublishErrorMessageRequest.
+                PublishErrorMessageRequestBuilder()
+                .withMessages(messageList)
+                .withMessageBroker(MessageBroker.TAPE)
+                .withTapeFileName("tape.txt")
+                .build());
+```
+
 Send your function as a parameter that you want to be executed, in short your retry logic
 Data is received in the form of String that can be easily converted back to your object using:
 
@@ -121,19 +132,37 @@ client.receiveRetires(new ReceiveErrorMessageRequest
                 }
             });
 ```
+File Based receiver:
+
+```java
+ client.receiveRetires(new ReceiveErrorMessageRequest
+                .ReceiveErrorMessageRequestBuilder()
+                .withMessageBroker(MessageBroker.TAPE)
+                .withtapeFileName("tape.txt")
+                .withPingInterval(5)
+                .build(), strings -> {
+            strings.forEach(e -> { value.addAndGet(1);
+                try {
+                    System.out.println( "  Message:  " + converter.fromString(e).toString());
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                }
+            });
+```
 
 Build Library
 ------------
-If you want to run the tests as part of the package you will need a valid SQS Url
-which you will have to add at:
+Best place to test the library will be to run:
 
 ```java
 ApplicationTest.java
 ```
 
-To build without running tests:
+There are 3 tests, one for SQS based backend, Kafka based backend and a Simple File based backend.
 
-```mvn clean install -D skipTests=true ```
+To build the package:
+
+```mvn clean install ```
 
 Get Library
 ------------
