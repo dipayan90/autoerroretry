@@ -54,7 +54,7 @@ Convert Your Class to String first:
  List<String> messageList = Collections.singletonList(s);
 ```
 
-Publish the object that needs to be retried. SQS Url will be required here :
+Publish the object that needs to be retried. FIFO based SQS Url will be required here :
 
 ```java
 
@@ -65,6 +65,8 @@ Publish the object that needs to be retried. SQS Url will be required here :
                 .withSqsUrl(queueUrl).build());
 
 ```
+Since we may retry the same message before the 5 minute deduplication interval set by AWS,
+we have se the deduplication ID such that it also processes dupes withing the 5 minute interval. 
 
 Publish object to kafka based backend: 
 
