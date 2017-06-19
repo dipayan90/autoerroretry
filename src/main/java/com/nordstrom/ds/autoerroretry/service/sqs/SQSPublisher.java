@@ -42,7 +42,11 @@ public class SQSPublisher implements Publisher{
             AmazonSQS sqs = ApplicationConfig.getApplicationConfig().getsqsclient();
             SendMessageBatchRequest send_batch_request = new SendMessageBatchRequest()
                     .withQueueUrl(sqsUrl);
-            messages.forEach(message -> send_batch_request.setEntries(messages.stream().map(e -> new SendMessageBatchRequestEntry(Integer.toString(e.hashCode()), e)).collect(Collectors.toList())));
+            messages.forEach(message -> send_batch_request.setEntries(messages.stream()
+                    .map(e -> new SendMessageBatchRequestEntry(Integer.toString(e.hashCode()), e)
+                    .withMessageGroupId("retryMessageGroupId")
+                    .withMessageDeduplicationId(String.valueOf(message.hashCode()*System.nanoTime())))
+                    .collect(Collectors.toList())));
             executor.execute(() -> sqs.sendMessageBatch(send_batch_request));
         }
     }

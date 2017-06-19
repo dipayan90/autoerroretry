@@ -38,15 +38,11 @@ public class SQSReceiver implements Receiver{
         assert connectionSettings!=null;
         assert connectionSettings.getProperties().getProperty("sqsUrl") != null;
         String sqsUrl = connectionSettings.getProperties().getProperty("sqsUrl");
-        List<ReceivedMessage> returnList = new ArrayList<>();
-        List<Message> response = new ArrayList<>();
-        while(getNumberOfObjectsToRetry(sqsUrl) > 0){
-            ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
+        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                     .withQueueUrl(sqsUrl)
                     .withWaitTimeSeconds(10);
-            ReceiveMessageResult receiveMessageResult = sqs.receiveMessage(receiveMessageRequest);
-            response.addAll(receiveMessageResult.getMessages());
-        }
+        ReceiveMessageResult receiveMessageResult = sqs.receiveMessage(receiveMessageRequest);
+        List<Message> response =  receiveMessageResult.getMessages();
         List<String> messagesBody = response.stream().map(Message::getBody).collect(Collectors.toList());
         return new ReceivedMessage(messagesBody,new ArrayList<>(response));
     }
@@ -72,16 +68,18 @@ public class SQSReceiver implements Receiver{
     public void deleteMessagesFromQueue(List<Message> messages,final ConnectionSettings connectionSettings){
         assert connectionSettings != null;
         assert connectionSettings.getProperties().getProperty("sqsUrl") != null;
-        String sqsUrl = connectionSettings.getProperties().getProperty("sqsUrl");
-        DeleteMessageBatchRequest deleteMessageBatchRequest = new DeleteMessageBatchRequest(sqsUrl)
-                .withEntries(messages
-                        .stream()
-                        .map( msg -> new DeleteMessageParams(msg.getReceiptHandle(),msg.getMessageId()))
-                        .collect(Collectors.toList())
-                        .stream()
-                        .map(param -> new DeleteMessageBatchRequestEntry().withReceiptHandle(param.receiptHandle).withId(param.id))
-                        .collect(Collectors.toList()));
-        sqs.deleteMessageBatch(deleteMessageBatchRequest);
+        if(messages.size() > 0){
+            String sqsUrl = connectionSettings.getProperties().getProperty("sqsUrl");
+            DeleteMessageBatchRequest deleteMessageBatchRequest = new DeleteMessageBatchRequest(sqsUrl)
+                    .withEntries(messages
+                            .stream()
+                            .map( msg -> new DeleteMessageParams(msg.getReceiptHandle(),msg.getMessageId()))
+                            .collect(Collectors.toList())
+                            .stream()
+                            .map(param -> new DeleteMessageBatchRequestEntry().withReceiptHandle(param.receiptHandle).withId(param.id))
+                            .collect(Collectors.toList()));
+            sqs.deleteMessageBatch(deleteMessageBatchRequest);
+        }
     }
 
     // Java 8 doesn't support Tuple Sigh !!
