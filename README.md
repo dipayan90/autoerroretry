@@ -172,7 +172,7 @@ Get Library
 <dependency>
   <groupId>com.nordstrom.ds</groupId>
   <artifactId>autoerroretry</artifactId>
-  <version>1.2</version>
+  <version>1.3</version>
   <type>pom</type>
 </dependency> 
 ```
