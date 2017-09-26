@@ -8,7 +8,10 @@ public class ReceiveErrorMessageRequest {
      * Url for the sqs queue that you have created on aws
      */
     private final String sqsUrl;
-
+    /**
+     * Value in seconds for the initial delay after which you want to keep pining the queue for new retryable objects.
+     */
+    private final long initialDelay;
     /**
      * Value in seconds for the interval after which you want to keep pining the queue for new retryable objects.
      */
@@ -44,6 +47,10 @@ public class ReceiveErrorMessageRequest {
     public long getPingInterval() {
         return pingInterval;
     }
+    
+    public long getInitialDelay() {
+    		return initialDelay;
+    }
 
     public MessageBroker getMessageBroker(){return messageBroker;}
 
@@ -59,6 +66,7 @@ public class ReceiveErrorMessageRequest {
 
     private ReceiveErrorMessageRequest(ReceiveErrorMessageRequestBuilder builder){
         this.sqsUrl = builder.nestedSqsUrl;
+        this.initialDelay = builder.initialDelay;
         this.pingInterval = builder.nestedInterval;
         this.messageBroker = builder.messageBroker;
         this.kafkaServers = builder.kafkaServers;
@@ -69,6 +77,7 @@ public class ReceiveErrorMessageRequest {
 
     public static class ReceiveErrorMessageRequestBuilder{
         private String nestedSqsUrl;
+        private long initialDelay;
         private long nestedInterval;
         private MessageBroker messageBroker;
         private List<String> kafkaServers;
@@ -89,6 +98,11 @@ public class ReceiveErrorMessageRequest {
             this.nestedSqsUrl = sqsUrl;
             return this;
         }
+        
+        public ReceiveErrorMessageRequestBuilder withInitialDelay(long timeUnit){
+            this.initialDelay = timeUnit;
+            return this;
+        }  
 
         public ReceiveErrorMessageRequestBuilder withPingInterval(long timeUnit){
             this.nestedInterval = timeUnit;
