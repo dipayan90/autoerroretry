@@ -12,6 +12,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -131,7 +132,7 @@ public class ApplicationTest {
     @Test
     public void testCompleteFlowUsingTape() throws Exception{
         List<String> messageList = new ArrayList<>();
-
+        String tapeFileName = new File("").getAbsolutePath() + "/src/test/resources/tape.txt";
         Transaction transaction1 = new Transaction();
         transaction1.setDate("12/27/1990");
         transaction1.setTransactionId(1);
@@ -155,13 +156,13 @@ public class ApplicationTest {
                 PublishErrorMessageRequestBuilder()
                 .withMessages(messageList)
                 .withMessageBroker(MessageBroker.TAPE)
-                .withTapeFileName("/home/dipayan/Programs/autoerroretry/src/test/resources/tape.txt")
+                .withTapeFileName(tapeFileName)
                 .build());
 
         client.receiveRetires(new ReceiveErrorMessageRequest
                 .ReceiveErrorMessageRequestBuilder()
                 .withMessageBroker(MessageBroker.TAPE)
-                .withtapeFileName("/home/dipayan/Programs/autoerroretry/src/test/resources/tape.txt")
+                .withtapeFileName(tapeFileName)
                 .withPingInterval(5)
                 .build(), strings -> {
             strings.forEach(e -> { value.addAndGet(1);
