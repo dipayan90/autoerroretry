@@ -114,43 +114,54 @@ public class LoaderHandlerClient {
         publisher.publish(new TapeConnectionSettings(fileName),messages);
     }
 
-    private void receiveAndProcessFromSqs(ReceiveErrorMessageRequest receiveErrorMessageRequest, Function<List<String>,Void> function){
-        assert receiveErrorMessageRequest.getSqsUrl()!=null;
-        final ScheduledExecutorService scheduler =
-                Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(() -> {
-            SQSReceiver receiver = SQSReceiver.getReceiver();
-            ReceivedMessage receivedObjects = receiver.receive(new SqsConnectionSettings(receiveErrorMessageRequest.getSqsUrl()));
-            function.apply(receivedObjects.getMessageBody());
-            // Once Message is received delete it from the queue
-            receiver.deleteMessagesFromQueue( receivedObjects.getMessageWrapper().stream().map(obj -> (Message) obj).collect(Collectors.toList()),new SqsConnectionSettings(receiveErrorMessageRequest.getSqsUrl()));
-        }, 0, receiveErrorMessageRequest.getPingInterval() == 0 ? 10: receiveErrorMessageRequest.getPingInterval() , TimeUnit.SECONDS);
-    }
+	private void receiveAndProcessFromSqs(ReceiveErrorMessageRequest receiveErrorMessageRequest,
+			Function<List<String>, Void> function) {
+		assert receiveErrorMessageRequest.getSqsUrl() != null;
+		final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+		scheduler.scheduleAtFixedRate(() -> {
+			SQSReceiver receiver = SQSReceiver.getReceiver();
+			ReceivedMessage receivedObjects = receiver
+					.receive(new SqsConnectionSettings(receiveErrorMessageRequest.getSqsUrl()));
+			function.apply(receivedObjects.getMessageBody());
+			// Once Message is received delete it from the queue
+			receiver.deleteMessagesFromQueue(
+					receivedObjects.getMessageWrapper().stream().map(obj -> (Message) obj).collect(Collectors.toList()),
+					new SqsConnectionSettings(receiveErrorMessageRequest.getSqsUrl()));
+		}, receiveErrorMessageRequest.getInitialDelay() == 0 ? 0 : receiveErrorMessageRequest.getInitialDelay(),
+				receiveErrorMessageRequest.getPingInterval() == 0 ? 10 : receiveErrorMessageRequest.getPingInterval(),
+				TimeUnit.SECONDS);
+	}
 
-    private void receiveAndProcessFromKafka(ReceiveErrorMessageRequest receiveErrorMessageRequest, Function<List<String>,Void> function){
-        assert receiveErrorMessageRequest.getKafkaServers()!=null;
-        assert receiveErrorMessageRequest.getKafkaTopicName()!=null;
-        assert receiveErrorMessageRequest.getKafkaConsumerGroupName()!=null;
-        final ScheduledExecutorService scheduler =
-                Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(() -> {
-            Receiver receiver = KafkaReceiver.getReceiver();
-            ReceivedMessage receivedObjects = receiver.receive(new KafkaConnectionSettings(receiveErrorMessageRequest.getKafkaServers(),
-                    receiveErrorMessageRequest.getKafkaTopicName(),receiveErrorMessageRequest.getKafkaConsumerGroupName()));
-            function.apply(receivedObjects.getMessageBody());
-        }, 0, receiveErrorMessageRequest.getPingInterval() == 0 ? 10: receiveErrorMessageRequest.getPingInterval() , TimeUnit.SECONDS);
-    }
+	private void receiveAndProcessFromKafka(ReceiveErrorMessageRequest receiveErrorMessageRequest,
+			Function<List<String>, Void> function) {
+		assert receiveErrorMessageRequest.getKafkaServers() != null;
+		assert receiveErrorMessageRequest.getKafkaTopicName() != null;
+		assert receiveErrorMessageRequest.getKafkaConsumerGroupName() != null;
+		final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+		scheduler.scheduleAtFixedRate(() -> {
+			Receiver receiver = KafkaReceiver.getReceiver();
+			ReceivedMessage receivedObjects = receiver.receive(new KafkaConnectionSettings(
+					receiveErrorMessageRequest.getKafkaServers(), receiveErrorMessageRequest.getKafkaTopicName(),
+					receiveErrorMessageRequest.getKafkaConsumerGroupName()));
+			function.apply(receivedObjects.getMessageBody());
+		}, receiveErrorMessageRequest.getInitialDelay() == 0 ? 0 : receiveErrorMessageRequest.getInitialDelay(),
+				receiveErrorMessageRequest.getPingInterval() == 0 ? 10 : receiveErrorMessageRequest.getPingInterval(),
+				TimeUnit.SECONDS);
+	}
 
-    private void receiveAndProcessFromTape(ReceiveErrorMessageRequest receiveErrorMessageRequest,Function<List<String>,Void> function){
-        assert receiveErrorMessageRequest.getTapeFileName() != null;
-        final ScheduledExecutorService scheduler =
-                Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(() -> {
-            Receiver receiver = TapeReceiver.getTapeReceiver();
-            ReceivedMessage receivedObjects = receiver.receive(new TapeConnectionSettings(receiveErrorMessageRequest.getTapeFileName()));
-            function.apply(receivedObjects.getMessageBody());
-        }, 0, receiveErrorMessageRequest.getPingInterval() == 0 ? 10: receiveErrorMessageRequest.getPingInterval() , TimeUnit.SECONDS);
-    }
+	private void receiveAndProcessFromTape(ReceiveErrorMessageRequest receiveErrorMessageRequest,
+			Function<List<String>, Void> function) {
+		assert receiveErrorMessageRequest.getTapeFileName() != null;
+		final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+		scheduler.scheduleAtFixedRate(() -> {
+			Receiver receiver = TapeReceiver.getTapeReceiver();
+			ReceivedMessage receivedObjects = receiver
+					.receive(new TapeConnectionSettings(receiveErrorMessageRequest.getTapeFileName()));
+			function.apply(receivedObjects.getMessageBody());
+		}, receiveErrorMessageRequest.getInitialDelay() == 0 ? 0 : receiveErrorMessageRequest.getInitialDelay(),
+				receiveErrorMessageRequest.getPingInterval() == 0 ? 10 : receiveErrorMessageRequest.getPingInterval(),
+				TimeUnit.SECONDS);
+	}
 
 
 }
