@@ -16,6 +16,7 @@ It supports the following :
  - Configuring your own Connection settings for Amazon SQS, Apache Kafka and File Based Queue Tape.
  - Configuring how often you would want your logic to obtain failures and do a retry of your own custom logic. 
    Default value is 10 secs if nothing is passed.
+   You can also configure an initial delay in kick starting the retry.Default value for the initial delay is 0 seconds
 
 Future Scope:
 
@@ -172,7 +173,7 @@ Get Library
 <dependency>
   <groupId>com.nordstrom.ds</groupId>
   <artifactId>autoerroretry</artifactId>
-  <version>1.3</version>
+  <version>1.4</version>
   <type>pom</type>
 </dependency> 
 ```
