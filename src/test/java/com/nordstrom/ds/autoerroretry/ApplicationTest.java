@@ -175,7 +175,7 @@ public class ApplicationTest {
             return null;
         });
 
-        Thread.sleep(100000);
+        Thread.sleep(1000);
         Assert.assertTrue(value.get() > 0);
     }
 
