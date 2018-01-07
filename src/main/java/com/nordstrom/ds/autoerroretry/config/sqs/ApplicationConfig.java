@@ -18,9 +18,11 @@ public class ApplicationConfig {
 
     private ClientConfiguration getClientConfiguration(){
         ClientConfiguration clientConfiguration = new ClientConfiguration();
-        clientConfiguration.setProtocol(Protocol.HTTPS);
-        clientConfiguration.setProxyHost("webproxysea.nordstrom.net");
-        clientConfiguration.setProxyPort(8181);
+        if(!isDeployedOnAWS()){
+            clientConfiguration.setProtocol(Protocol.HTTPS);
+            clientConfiguration.setProxyHost("webproxysea.nordstrom.net");
+            clientConfiguration.setProxyPort(8181);
+        }
         return clientConfiguration;
     }
 
@@ -40,7 +42,7 @@ public class ApplicationConfig {
     }
 
     private boolean isDeployedOnAWS(){
-        String environment = System.getProperty("env.class");
+        String environment = System.getProperty("spring.profiles.active");
         return !isEmpty(environment) && ( environment.equals(PROD) || environment.equals(NONPROD) );
     }
 
